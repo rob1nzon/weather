@@ -14,8 +14,10 @@ import gzip
 from urllib2 import urlopen
 from bs4 import BeautifulSoup
 from PyQt4 import QtCore, QtGui
-import sys
+from StringIO import StringIO
+
 import csv
+
 
 
 try:
@@ -57,18 +59,18 @@ class Weather(QtGui.QMainWindow):
         global cityurl
         for link in soup.find_all('div', 'RuLinks'):
             s=str(link)
-            # print s
+            #print s
             a=s.rfind("<a")+9
-            b=a+s[s.rfind("<a")+9:a+200].find("style")-2
+            b=a+s[s.rfind("<a")+9:a+200].find('">')
    
             s2=s[a:a+200]
-            a1=s2.find("title")+7
+            a1=s2.find("title")+2
             b1=s2.find('"><s')
             url =s[a:b]
             name = s2[a1:b1]
             #print name
             #print url
-            cityurl[_fromUtf8(name)]=_fromUtf8(url)
+            #cityurl[_fromUtf8(name)]=_fromUtf8(url)
             # a=s.index("RuLinks")+18
             # b=a+s[s.index("RuLinks")+18:200].index(">")-1
             # s2=s[s.index("RuLinks")+18:200]
@@ -130,7 +132,8 @@ class Weather(QtGui.QMainWindow):
         self.ui.plainTextEdit.appendPlainText(text+_fromUtf8(" "+id))
 
     def load_data(self):
-        #http://rp5.ru/inc/f_archive.php?wmo_id=26795&f_ed0=21&f_ed1=05&f_ed2=2014&f_ed3=05&f_ed4=05&f_ed5=21&f_ed6=25&f_ed7=05&f_ed8=2014&f_pe=1&f_pe1=2&lng_id=2
+        #metar=5001&a_date1=15.06.2014&a_date2=16.06.2014&f_ed3=6&f_ed4=6&f_ed5=15&f_pe=1&f_pe1=3&lng_id=2
+        #http://rp5.ru/inc/f_metar.php?
         temp_var = self.ui.dateEdit.date()
         var_name = temp_var.toPyDate()
         y1=str(var_name)[0:4]
@@ -141,8 +144,25 @@ class Weather(QtGui.QMainWindow):
         y2=str(var_name)[0:4]
         m2=str(var_name)[5:7]
         d2=str(var_name)[8:10]
-        
-        data = {    'f_ed0':d2,
+
+        dt1=d1+'.'+m1+'.'+y1
+        dt2=d2+'.'+m1+'.'+y2
+        #print dt1,dt2
+        # data = {
+        #     'metar=':str(id),
+        #     'a_date1':dt1,
+        #     'a_date2':dt2,
+        #     'f_ed3':'6',
+        #     'f_ed4':'6',
+        #     'f_ed5':'15',
+        #     'f_pe':'1',
+        #     'f_pe1':'3',
+        #     'lng_id':'2'
+        # }
+        data = {
+                    'a_date1':dt1,
+                    'a_date2':dt2,
+                    'f_ed0':d2,
                     'f_ed1':m2,
                     'f_ed2':y2,
                     'f_ed3':'05',
@@ -156,13 +176,15 @@ class Weather(QtGui.QMainWindow):
                     'lng_id':'2',
                     'wmo_id':str(id)
                     }
+        # url='http://rp5.ru/inc/f_archive.php'
         url='http://rp5.ru/inc/f_archive.php'
         r = requests.post(url,data)
         s=r.text
+        #print s
         a=s.find('http://')
         b=s.rfind('csv.gz')+6
-        #self.ui.plainTextEdit.appendPlainText(s[a:b])
-        
+        self.ui.plainTextEdit.appendPlainText(s[a:b])
+
         request = urllib2.Request(s[a:b])
         request.add_header('Accept-encoding', 'gzip')
         response = urllib2.urlopen(request)
@@ -171,6 +193,7 @@ class Weather(QtGui.QMainWindow):
         data = f.read()
         #self.ui.plainTextEdit.appendPlainText(_fromUtf8(data))
         cdata= csv.reader(data)
+
         n=0
         for r in cdata:
             s=str(r)
@@ -230,9 +253,11 @@ class Ui_Weather(object):
 
 if __name__ == "__main__":
     import sys
+    reload(sys)
+    sys.setdefaultencoding('cp1251')
     app = QtGui.QApplication(["Weather RP5 loader"])
     MainWindow = QtGui.QMainWindow()
     wem = Weather()
     res = app.exec_()
+    
     sys.exit(res)
-
